@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Soulmate — AI Reminder Friend</title>
+<style>
+  :root {
+    --bg: #07070f;
+    --bg2: #0f0f1a;
+    --bg3: #141424;
+    --surface: rgba(255,255,255,0.04);
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0f0fa;
+    --muted: rgba(255,255,255,0.45);
+    --hint: rgba(255,255,255,0.25);
+    --purple: #8b5cf6;
+    --purple2: #a78bfa;
+    --blue: #38bdf8;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #f87171;
+    --r: 12px;
+    --r2: 20px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;line-height:1.6}
+  ::-webkit-scrollbar{width:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+  /* ── Layout ── */
+  .layout{display:flex;min-height:100vh}
+  .sidebar{width:240px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0}
+  .main{flex:1;overflow-y:auto;padding:32px}
+
+  /* ── Sidebar ── */
+  .logo{display:flex;align-items:center;gap:10px;padding:0 20px 28px;border-bottom:1px solid var(--border)}
+  .logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--purple),var(--blue));display:flex;align-items:center;justify-content:center;font-size:18px}
+  .logo-name{font-size:18px;font-weight:700;letter-spacing:-.02em}
+  .logo-sub{font-size:11px;color:var(--muted)}
+  .nav{padding:20px 12px;display:flex;flex-direction:column;gap:2px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:13.5px;color:var(--muted);transition:all .15s;border:none;background:none;width:100%;text-align:left}
+  .nav-item:hover{background:var(--surface);color:var(--text)}
+  .nav-item.active{background:rgba(139,92,246,.15);color:var(--purple2)}
+  .nav-icon{font-size:16px;width:20px;text-align:center}
+  .sidebar-footer{margin-top:auto;padding:16px 20px;border-top:1px solid var(--border)}
+  .status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;margin-right:6px}
+  .status-label{font-size:12px;color:var(--muted)}
+
+  /* ── Header ── */
+  .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:12px;flex-wrap:wrap}
+  .page-title{font-size:24px;font-weight:700;letter-spacing:-.025em}
+  .page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+
+  /* ── Stats row ── */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:28px}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;transition:border-color .2s}
+  .stat-card:hover{border-color:var(--border2)}
+  .stat-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--hint);margin-bottom:8px}
+  .stat-num{font-size:28px;font-weight:700;letter-spacing:-.03em}
+  .stat-num.purple{color:var(--purple2)}
+  .stat-num.green{color:var(--green)}
+  .stat-num.amber{color:var(--amber)}
+  .stat-num.red{color:var(--red)}
+
+  /* ── Cards ── */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:24px;margin-bottom:20px}
+  .card-title{font-size:15px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .card-title-icon{font-size:18px}
+
+  /* ── Form ── */
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .form-group{display:flex;flex-direction:column;gap:6px}
+  .form-group.full{grid-column:1/-1}
+  label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--hint)}
+  input,select,textarea{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;font-size:14px;color:var(--text);outline:none;transition:border-color .2s;font-family:inherit;width:100%}
+  input:focus,select:focus,textarea:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(139,92,246,.15)}
+  input::placeholder,textarea::placeholder{color:var(--hint)}
+  select option{background:#1a1a2e}
+  textarea{resize:vertical;min-height:72px}
+  .form-row{display:flex;gap:12px;margin-top:16px;align-items:center;flex-wrap:wrap}
+
+  /* ── Buttons ── */
+  .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
+  .btn-primary{background:linear-gradient(135deg,var(--purple),#6366f1);color:#fff}
+  .btn-primary:hover{opacity:.88;transform:translateY(-1px)}
+  .btn-secondary{background:var(--surface);border:1px solid var(--border2);color:var(--text)}
+  .btn-secondary:hover{background:rgba(255,255,255,.08)}
+  .btn-danger{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.25);color:var(--red)}
+  .btn-danger:hover{background:rgba(248,113,113,.2)}
+  .btn-sm{padding:6px 14px;font-size:12px}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+  /* ── Reminder list ── */
+  .reminder-list{display:flex;flex-direction:column;gap:10px}
+  .reminder-item{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;transition:border-color .2s}
+  .reminder-item:hover{border-color:var(--border2)}
+  .ri-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  .ri-body{flex:1;min-width:0}
+  .ri-task{font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ri-meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .ri-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:999px;flex-shrink:0}
+  .badge-scheduled{background:rgba(139,92,246,.15);color:var(--purple2)}
+  .badge-calling{background:rgba(56,189,248,.15);color:var(--blue)}
+  .badge-called{background:rgba(52,211,153,.12);color:var(--green)}
+  .badge-failed{background:rgba(248,113,113,.12);color:var(--red)}
+  .badge-cancelled{background:rgba(255,255,255,.06);color:var(--hint)}
+
+  /* ── Test call section ── */
+  .test-panel{background:linear-gradient(135deg,rgba(139,92,246,.1),rgba(56,189,248,.06));border:1px solid rgba(139,92,246,.2);border-radius:var(--r2);padding:24px;margin-bottom:20px}
+
+  /* ── Setup guide ── */
+  .setup-step{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)}
+  .setup-step:last-child{border-bottom:none}
+  .step-num{width:28px;height:28px;border-radius:50%;background:rgba(139,92,246,.2);color:var(--purple2);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+  .step-content h4{font-size:14px;font-weight:600;margin-bottom:4px}
+  .step-content p{font-size:13px;color:var(--muted);line-height:1.5}
+  .code-chip{display:inline-block;background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-family:monospace;font-size:12px;color:var(--blue)}
+
+  /* ── Health indicators ── */
+  .health-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+  .health-row:last-child{border-bottom:none}
+  .health-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .health-label{font-size:13px;flex:1}
+  .health-val{font-size:12px;color:var(--muted)}
+
+  /* ── Tabs ── */
+  .tab-row{display:flex;gap:4px;background:rgba(255,255,255,.04);border-radius:999px;padding:4px;margin-bottom:24px;width:fit-content}
+  .tab-btn{padding:7px 18px;border-radius:999px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:var(--muted);transition:all .15s}
+  .tab-btn.active{background:rgba(139,92,246,.25);color:var(--purple2)}
+
+  /* ── Toast ── */
+  #toast{position:fixed;bottom:28px;right:28px;background:#1a1a2e;border:1px solid var(--border2);border-radius:12px;padding:12px 18px;font-size:14px;transform:translateY(80px);opacity:0;transition:all .3s;z-index:999;max-width:320px}
+  #toast.show{transform:translateY(0);opacity:1}
+  #toast.success{border-color:rgba(52,211,153,.4);color:var(--green)}
+  #toast.error{border-color:rgba(248,113,113,.4);color:var(--red)}
+
+  /* ── WhatsApp flow diagram ── */
+  .flow-diagram{display:flex;align-items:center;gap:0;overflow-x:auto;padding:8px 0;margin-top:4px}
+  .flow-node{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0}
+  .flow-node-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px}
+  .flow-node-label{font-size:10px;color:var(--muted);text-align:center;max-width:64px}
+  .flow-arrow{color:var(--hint);font-size:18px;padding:0 6px;margin-top:-14px;flex-shrink:0}
+
+  /* ── Responsive ── */
+  @media (max-width:700px){
+    .sidebar{display:none}
+    .main{padding:20px 16px}
+    .form-grid{grid-template-columns:1fr}
+    .stats{grid-template-columns:1fr 1fr}
+  }
+
+  /* ── Animations ── */
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .pulsing{animation:pulse 2s infinite}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .fade-in{animation:fadeIn .3s ease-out forwards}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">🤗</div>
+      <div>
+        <div class="logo-name">Soulmate</div>
+        <div class="logo-sub">AI Reminder Friend</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" onclick="showTab('dashboard')">
+        <span class="nav-icon">📊</span> Dashboard
+      </button>
+      <button class="nav-item" onclick="showTab('create')">
+        <span class="nav-icon">➕</span> New reminder
+      </button>
+      <button class="nav-item" onclick="showTab('reminders')">
+        <span class="nav-icon">🔔</span> All reminders
+      </button>
+      <button class="nav-item" onclick="showTab('test')">
+        <span class="nav-icon">📞</span> Test call
+      </button>
+      <button class="nav-item" onclick="showTab('setup')">
+        <span class="nav-icon">⚙️</span> Setup guide
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <span class="status-dot pulsing"></span>
+      <span class="status-label" id="server-status">Checking...</span>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- ── Dashboard ── -->
+    <div id="tab-dashboard" class="tab-panel">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-sub">Overview of your Soulmate reminders</div>
+        </div>
+        <button class="btn btn-primary" onclick="showTab('create')">+ New reminder</button>
+      </div>
+
+      <div class="stats" id="stats-row">
+        <div class="stat-card"><div class="stat-label">Total</div><div class="stat-num purple" id="s-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">Scheduled</div><div class="stat-num amber" id="s-scheduled">—</div></div>
+        <div class="stat-card"><div class="stat-label">Called</div><div class="stat-num green" id="s-called">—</div></div>
+        <div class="stat-card"><div class="stat-label">Failed</div><div class="stat-num red" id="s-failed">—</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🌐</span> How WhatsApp messages flow</div>
+        <div class="flow-diagram">
+          <div class="flow-node">
+            <div class="flow-node-icon" style="background:rgba(37,211,102,.15)">💬</div>
+            <div class="flow-node-label">User texts WhatsApp</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">
+            <div class="flow-node-icon" style="background:rgba(56,189,248,.12)">🌐</div>
+            <div class="flow-node-label">Meta API</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">
+            <div class="flow-node-icon" style="background:rgba(99,102,241,.15)">🖥️</div>
+            <div class="flow-node-label">Your server <span class="code-chip">/webhook</span></div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">
+            <div class="flow-node-icon" style="background:rgba(139,92,246,.15)">🧠</div>
+            <div class="flow-node-label">Claude AI parser</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">
+            <div class="flow-node-icon" style="background:rgba(251,191,36,.12)">⏰</div>
+            <div class="flow-node-label">Redis scheduler</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">
+            <div class="flow-node-icon" style="background:rgba(248,113,113,.12)">📞</div>
+            <div class="flow-node-label">Twilio call</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">
+            <div class="flow-node-icon" style="background:rgba(52,211,153,.12)">📱</div>
+            <div class="flow-node-label">User's phone</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🔔</span> Recent reminders</div>
+        <div id="recent-list"><div style="color:var(--muted);font-size:13px">Loading...</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">💚</span> System health</div>
+        <div id="health-grid"></div>
+      </div>
+    </div>
+
+    <!-- ── Create reminder ── -->
+    <div id="tab-create" class="tab-panel" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">New reminder</div>
+          <div class="page-sub">Schedule a call via the dashboard or just text Soulmate on WhatsApp</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">📋</span> Reminder details</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Phone number</label>
+            <input type="tel" id="f-phone" placeholder="+919876543210" />
+          </div>
+          <div class="form-group">
+            <label>Name (optional)</label>
+            <input type="text" id="f-name" placeholder="e.g. Arjun" />
+          </div>
+          <div class="form-group full">
+            <label>What to remind</label>
+            <textarea id="f-task" placeholder="e.g. Take blood pressure medication, Meeting with Priya at 4pm..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Date & time</label>
+            <input type="datetime-local" id="f-datetime" />
+          </div>
+          <div class="form-group">
+            <label>Timezone</label>
+            <select id="f-tz">
+              <option value="Asia/Kolkata">India (IST)</option>
+              <option value="America/New_York">New York (EST)</option>
+              <option value="America/Los_Angeles">Los Angeles (PST)</option>
+              <option value="Europe/London">London (GMT)</option>
+              <option value="Asia/Dubai">Dubai (GST)</option>
+              <option value="Asia/Singapore">Singapore (SGT)</option>
+              <option value="UTC">UTC</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <button class="btn btn-primary" onclick="createReminder()">
+            📞 Schedule reminder call
+          </button>
+          <button class="btn btn-secondary" onclick="clearForm()">Clear</button>
+        </div>
+      </div>
+
+      <div class="card" style="border-color:rgba(37,211,102,.2)">
+        <div class="card-title"><span class="card-title-icon">💬</span> Or just text Soulmate on WhatsApp</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.8">
+          Once your WhatsApp webhook is live, your users can simply send messages like:<br><br>
+          <span class="code-chip">"Remind me to take meds at 9pm"</span>&nbsp;&nbsp;
+          <span class="code-chip">"Call me before my 3pm meeting"</span>&nbsp;&nbsp;
+          <span class="code-chip">"Remind me about gym at 7am tomorrow"</span><br><br>
+          Soulmate will parse it automatically, confirm over WhatsApp, and call them right on time.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── All reminders ── -->
+    <div id="tab-reminders" class="tab-panel" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">All reminders</div>
+          <div class="page-sub">Every reminder scheduled through dashboard or WhatsApp</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="loadReminders()">↻ Refresh</button>
+      </div>
+      <div id="all-reminders-list">
+        <div style="color:var(--muted);font-size:13px">Loading...</div>
+      </div>
+    </div>
+
+    <!-- ── Test call ── -->
+    <div id="tab-test" class="tab-panel" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Test call</div>
+          <div class="page-sub">Place a live Twilio call right now to verify your setup</div>
+        </div>
+      </div>
+
+      <div class="test-panel">
+        <div class="card-title"><span class="card-title-icon">📞</span> Place a test call via Twilio</div>
+        <div class="form-grid" style="max-width:480px">
+          <div class="form-group">
+            <label>Phone number</label>
+            <input type="tel" id="t-phone" placeholder="+919876543210"/>
+          </div>
+          <div class="form-group">
+            <label>Your name</label>
+            <input type="text" id="t-name" placeholder="e.g. Priya"/>
+          </div>
+          <div class="form-group full">
+            <label>Test message</label>
+            <input type="text" id="t-task" placeholder="Hey! This is a test call from Soulmate 🤗"/>
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <button class="btn btn-primary" onclick="testCall()">
+            📞 Call now via Twilio
+          </button>
+        </div>
+        <div style="margin-top:14px;font-size:12px;color:var(--muted)">
+          This places a real phone call immediately. Make sure Twilio credentials are set in your .env file.
+          Twilio trial accounts can only call verified numbers.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🎙️</span> Voice options</div>
+        <div style="font-size:13px;color:var(--muted);line-height:1.8">
+          Soulmate uses <strong style="color:var(--text)">Amazon Polly via Twilio</strong> for natural voice calls.<br><br>
+          Current voice: <span class="code-chip">Polly.Kajal</span> — Natural Indian English accent<br><br>
+          Other options you can set in <span class="code-chip">src/caller.js</span>:<br>
+          <span class="code-chip">Polly.Aditi</span> Hindi accent &nbsp;
+          <span class="code-chip">Polly.Joanna</span> US English &nbsp;
+          <span class="code-chip">Polly.Amy</span> British English &nbsp;
+          <span class="code-chip">Polly.Brian</span> British male
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Setup guide ── -->
+    <div id="tab-setup" class="tab-panel" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Setup guide</div>
+          <div class="page-sub">Everything you need to deploy Soulmate end-to-end</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">🚀</span> Getting started</div>
+        <div class="setup-step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Clone & install</h4>
+            <p>Run <span class="code-chip">npm install</span> in the project root. You need Node.js 18+ and Redis running locally (or use Upstash for serverless Redis).</p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Fill in your .env</h4>
+            <p>Copy <span class="code-chip">.env.example</span> to <span class="code-chip">.env</span> and fill in all four API keys: WhatsApp, Twilio, Anthropic, and your public BASE_URL.</p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Create a Meta App & WhatsApp Business account</h4>
+            <p>Go to <span class="code-chip">developers.facebook.com</span> → Create App → WhatsApp. Get your Phone Number ID and generate a permanent access token. Set your webhook URL to <span class="code-chip">https://yourdomain.com/webhook</span>.</p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>Set up Twilio</h4>
+            <p>Sign up at <span class="code-chip">twilio.com</span>. Buy a phone number with voice capability. Copy your Account SID and Auth Token into <span class="code-chip">.env</span>. Trial accounts must verify recipient numbers first.</p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h4>Deploy to a server</h4>
+            <p>Deploy on Railway, Render, or any VPS. Make sure your server has a public HTTPS URL — Meta requires HTTPS for webhooks. Use <span class="code-chip">ngrok</span> for local testing.</p>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">6</div>
+          <div class="step-content">
+            <h4>Verify webhook & test</h4>
+            <p>In Meta dashboard, click "Verify" on your webhook. Then use the Test Call tab above to place a live call. Finally text your WhatsApp number to test end-to-end!</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span class="card-title-icon">📁</span> Project structure</div>
+        <pre style="font-family:monospace;font-size:12px;color:var(--muted);line-height:1.8;white-space:pre">soulmate/
+├── src/
+│   ├── server.js       ← Express entry point
+│   ├── routes.js       ← All API & webhook routes
+│   ├── aiParser.js     ← Claude intent parsing
+│   ├── caller.js       ← Twilio voice calls
+│   ├── scheduler.js    ← Bull job queue
+│   └── whatsapp.js     ← WhatsApp send helper
+├── public/
+│   └── index.html      ← This dashboard
+├── .env.example
+└── package.json</pre>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let allReminders = [];
+
+// ── Init ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Set default datetime to 30min from now
+  const d = new Date(Date.now() + 30*60*1000);
+  d.setSeconds(0);
+  document.getElementById('f-datetime').value = d.toISOString().slice(0,16);
+
+  checkHealth();
+  loadReminders();
+  setInterval(loadReminders, 15000);
+  setInterval(checkHealth, 30000);
+});
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById(`tab-${name}`).style.display = 'block';
+  document.querySelector(`[onclick="showTab('${name}')"]`).classList.add('active');
+
+  if (name === 'reminders') renderAllReminders();
+  if (name === 'dashboard') renderRecentReminders();
+}
+
+// ── Load data ──────────────────────────────────────────────────────────────
+async function loadReminders() {
+  try {
+    const res = await fetch('/api/reminders');
+    allReminders = await res.json();
+    updateStats();
+    renderRecentReminders();
+    const allPane = document.getElementById('all-reminders-list');
+    if (allPane && document.getElementById('tab-reminders').style.display !== 'none') {
+      renderAllReminders();
+    }
+  } catch {
+    // server offline
+  }
+}
+
+function updateStats() {
+  const total = allReminders.length;
+  const scheduled = allReminders.filter(r => r.status === 'scheduled').length;
+  const called = allReminders.filter(r => r.status === 'called').length;
+  const failed = allReminders.filter(r => r.status === 'failed').length;
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-scheduled').textContent = scheduled;
+  document.getElementById('s-called').textContent = called;
+  document.getElementById('s-failed').textContent = failed;
+}
+
+function renderRecentReminders() {
+  const el = document.getElementById('recent-list');
+  if (!el) return;
+  const recent = allReminders.slice(0,5);
+  if (!recent.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:8px 0">No reminders yet. Create one above or text your WhatsApp number!</div>`;
+    return;
+  }
+  el.innerHTML = recent.map(r => reminderHTML(r)).join('');
+}
+
+function renderAllReminders() {
+  const el = document.getElementById('all-reminders-list');
+  if (!el) return;
+  if (!allReminders.length) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:13px">No reminders yet.</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="reminder-list">${allReminders.map(r => reminderHTML(r, true)).join('')}</div>`;
+}
+
+function reminderHTML(r, showDelete = false) {
+  const iconMap = { scheduled:'⏰', calling:'📞', called:'✅', failed:'❌', cancelled:'🚫' };
+  const colorMap = { scheduled:'rgba(139,92,246,.15)', calling:'rgba(56,189,248,.15)', called:'rgba(52,211,153,.1)', failed:'rgba(248,113,113,.1)', cancelled:'rgba(255,255,255,.04)' };
+  const icon = iconMap[r.status] || '🔔';
+  const bg = colorMap[r.status] || 'rgba(255,255,255,.04)';
+  const time = r.timeLabel || new Date(r.isoTime).toLocaleString('en-IN');
+  const deleteBtn = showDelete && r.status === 'scheduled'
+    ? `<button class="btn btn-danger btn-sm" onclick="cancelReminder('${r.id}')">Cancel</button>`
+    : '';
+  return `
+    <div class="reminder-item fade-in">
+      <div class="ri-icon" style="background:${bg}">${icon}</div>
+      <div class="ri-body">
+        <div class="ri-task">${escHtml(r.task)}</div>
+        <div class="ri-meta">📱 ${r.phone || '—'} &nbsp;·&nbsp; ⏰ ${escHtml(time)} &nbsp;·&nbsp; #${r.id}</div>
+      </div>
+      <span class="ri-badge badge-${r.status}">${r.status}</span>
+      ${deleteBtn}
+    </div>`;
+}
+
+// ── Create reminder ────────────────────────────────────────────────────────
+async function createReminder() {
+  const phone = document.getElementById('f-phone').value.trim();
+  const name = document.getElementById('f-name').value.trim();
+  const task = document.getElementById('f-task').value.trim();
+  const dt = document.getElementById('f-datetime').value;
+  const tz = document.getElementById('f-tz').value;
+
+  if (!phone || !task || !dt) {
+    showToast('Please fill in phone, task, and date/time', 'error');
+    return;
+  }
+
+  // Convert local time to UTC ISO — correct method using Intl
+  // dt is "YYYY-MM-DDTHH:MM" which browser treats as LOCAL time
+  // We need to interpret it as the selected timezone instead
+  const [datePart, timePart] = dt.split('T');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute] = timePart.split(':').map(Number);
+
+  // Build a date string that we can parse as the target timezone
+  const tzDate = new Date(`${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}T${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}:00`);
+
+  // Get UTC equivalent by finding the offset of the chosen timezone at that moment
+  const utcStr = tzDate.toLocaleString('en-US', { timeZone: 'UTC' });
+  const tzStr  = tzDate.toLocaleString('en-US', { timeZone: tz });
+  const diff   = new Date(utcStr) - new Date(tzStr); // ms offset
+  const isoTime = new Date(tzDate.getTime() + diff).toISOString();
+
+  const timeLabel = tzDate.toLocaleString('en-IN', { timeZone: tz, dateStyle: 'medium', timeStyle: 'short' });
+
+  try {
+    const res = await fetch('/api/reminders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, name, task, isoTime, timeLabel }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`✅ Reminder scheduled! Job #${data.jobId}`, 'success');
+      clearForm();
+      loadReminders();
+    } else {
+      showToast(data.error || 'Failed to schedule', 'error');
+    }
+  } catch {
+    showToast('Server error — is the backend running?', 'error');
+  }
+}
+
+function clearForm() {
+  ['f-phone','f-name','f-task'].forEach(id => document.getElementById(id).value = '');
+  const d = new Date(Date.now() + 30*60*1000);
+  d.setSeconds(0);
+  document.getElementById('f-datetime').value = d.toISOString().slice(0,16);
+}
+
+// ── Cancel reminder ────────────────────────────────────────────────────────
+async function cancelReminder(id) {
+  if (!confirm('Cancel this reminder?')) return;
+  const res = await fetch(`/api/reminders/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (data.success) {
+    showToast('Reminder cancelled', 'success');
+    loadReminders();
+  }
+}
+
+// ── Test call ──────────────────────────────────────────────────────────────
+async function testCall() {
+  const phone = document.getElementById('t-phone').value.trim();
+  const name = document.getElementById('t-name').value.trim();
+  const task = document.getElementById('t-task').value.trim() || 'This is a test call from Soulmate!';
+
+  if (!phone) { showToast('Please enter a phone number', 'error'); return; }
+
+  showToast('📞 Placing call via Twilio...', '');
+  try {
+    const res = await fetch('/api/test-call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, name, task }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(`✅ Call placed! SID: ${data.sid?.slice(0,20)}...`, 'success');
+    } else {
+      showToast(data.error || 'Call failed', 'error');
+    }
+  } catch {
+    showToast('Server error — is the backend running?', 'error');
+  }
+}
+
+// ── Health check ───────────────────────────────────────────────────────────
+async function checkHealth() {
+  try {
+    const res = await fetch('/api/health');
+    const data = await res.json();
+    document.getElementById('server-status').textContent = 'Server online';
+
+    const grid = document.getElementById('health-grid');
+    if (!grid) return;
+    const checks = [
+      { label: 'Server', ok: true, val: 'Running on port ' + (window.location.port || '80') },
+      { label: 'WhatsApp API', ok: data.env.whatsapp, val: data.env.whatsapp ? 'Token configured' : '⚠ WA_TOKEN missing' },
+      { label: 'Twilio', ok: data.env.twilio, val: data.env.twilio ? 'Credentials configured' : '⚠ TWILIO_SID missing' },
+      { label: 'Anthropic (Claude)', ok: data.env.anthropic, val: data.env.anthropic ? 'API key configured' : '⚠ ANTHROPIC_API_KEY missing' },
+    ];
+    grid.innerHTML = checks.map(c => `
+      <div class="health-row">
+        <div class="health-dot" style="background:${c.ok ? 'var(--green)' : 'var(--amber)'}"></div>
+        <div class="health-label">${c.label}</div>
+        <div class="health-val">${c.val}</div>
+      </div>`).join('');
+  } catch {
+    document.getElementById('server-status').textContent = 'Server offline';
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `show ${type}`;
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function getTimezoneOffset(tz) {
+  const now = new Date();
+  const utcStr = now.toLocaleString('en-US', { timeZone: 'UTC' });
+  const tzStr = now.toLocaleString('en-US', { timeZone: tz });
+  return new Date(tzStr) - new Date(utcStr);
+}
+</script>
+</body>
+</html>
